@@ -1,0 +1,455 @@
+<title>Simulacro 2° parcial autocorregible</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: una columna de trabajo tipo libro contable; cada asiento es una hoja rayada con columnas Debe/Haber. */
+:root{
+  --bg:#eef3f0; --paper:#ffffff; --ink:#15231c; --muted:#56675e; --rule:#c6d7cc; --rule-strong:#8fb19e;
+  --accent:#1e6a48; --accent-ink:#ffffff; --given:#e6eee9; --ok:#17733f; --ok-bg:#e3f3e8; --bad:#b3342a; --bad-bg:#fbe7e4;
+  --seen:#8a5d0c; --seen-bg:#fbf0d9; --focus:#2f7fd1;
+  --f-display:"Archivo", "Arial Narrow", system-ui, sans-serif;
+  --f-body:"Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-num:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0e1512; --paper:#152019; --ink:#e2ece6; --muted:#97aa9f; --rule:#2a3b31; --rule-strong:#3f6a52;
+  --accent:#5cc290; --accent-ink:#0b1510; --given:#1c2a22; --ok:#6fd39f; --ok-bg:#16301f; --bad:#f08a80; --bad-bg:#3a1c19;
+  --seen:#e8b95c; --seen-bg:#33270f; --focus:#7db7f0; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0e1512; --paper:#152019; --ink:#e2ece6; --muted:#97aa9f; --rule:#2a3b31; --rule-strong:#3f6a52;
+  --accent:#5cc290; --accent-ink:#0b1510; --given:#1c2a22; --ok:#6fd39f; --ok-bg:#16301f; --bad:#f08a80; --bad-bg:#3a1c19;
+  --seen:#e8b95c; --seen-bg:#33270f; --focus:#7db7f0; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1000px;margin:0 auto;padding-block:20px 64px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
+h1{font-size:clamp(26px,4.2vw,36px);font-weight:800;font-stretch:80%;letter-spacing:-.01em;line-height:1.1}
+h2{font-size:22px;font-weight:750;font-stretch:85%}
+h3{font-size:16px;font-weight:700}
+p{margin:0}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+
+/* Header + score */
+header.top{display:flex;flex-direction:column;gap:12px;border-bottom:3px double var(--rule-strong);padding-bottom:18px}
+.lead{max-width:68ch;color:var(--muted)}
+.score{position:sticky;top:env(safe-area-inset-top, 0px);z-index:5;background:var(--bg);padding-block:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:1px solid var(--rule)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top, 0px);z-index:10;background:var(--bg)}
+.chip{display:inline-flex;gap:6px;align-items:baseline;border:1px solid var(--rule);background:var(--paper);border-radius:999px;padding:4px 12px;font-size:13px}
+.chip b{font-family:var(--f-num);font-weight:600}
+.chip.done{border-color:var(--ok);color:var(--ok)}
+.score .spacer{flex:1 1 auto}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--rule-strong);background:var(--paper);color:var(--ink);padding:7px 14px;font-weight:600}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.ghost{background:transparent}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* Sections */
+section.block{display:flex;flex-direction:column;gap:14px}
+.block-head{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+.consigna{max-width:72ch}
+
+details.enun{background:var(--paper);border:1px solid var(--rule);border-radius:10px}
+details.enun summary{cursor:pointer;padding:12px 16px;font-weight:700;font-family:var(--f-display)}
+.enun-body{padding:4px 16px 16px;display:flex;flex-direction:column;gap:8px;max-width:78ch}
+.enun-body p b{font-family:var(--f-num);font-weight:600}
+.mini{border-collapse:collapse;font-size:14px;margin-block:4px}
+.mini td,.mini th{border:1px solid var(--rule);padding:4px 10px;text-align:left}
+.mini td.r,.mini th.r{text-align:right}
+.mini th{background:var(--given);font-weight:700}
+
+/* Ledger sheets */
+.asiento{background:var(--paper);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.as-head{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;padding:10px 14px;border-bottom:2px solid var(--rule-strong)}
+.as-head .n{font-family:var(--f-num);font-weight:600;color:var(--accent)}
+.as-head .date{font-family:var(--f-num);font-weight:600}
+.as-head .what{color:var(--muted)}
+.tbl-scroll{overflow-x:auto}
+table.ledger{border-collapse:collapse;width:100%;min-width:660px}
+.ledger th{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700;text-align:left;padding:6px 8px;border-bottom:1px solid var(--rule)}
+.ledger th.r{text-align:right}
+.ledger td{padding:4px 8px;border-bottom:1px solid var(--rule);vertical-align:middle}
+.ledger td.amt{border-left:1px solid var(--rule-strong);width:150px}
+.ledger tr.cr td.acct{padding-left:34px}
+.ledger tr.cr td.acct::before{content:"a ";color:var(--muted);font-style:italic;margin-left:-16px;margin-right:4px}
+.ledger td.nat{width:120px}
+.given{display:inline-block;width:100%;padding:6px 9px;border-radius:6px;background:var(--given);color:var(--ink)}
+.given.num{text-align:right}
+select,input[type=text],textarea{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--rule-strong);border-radius:6px;padding:6px 8px;width:100%}
+input.amt{font-family:var(--f-num);text-align:right;font-variant-numeric:tabular-nums}
+.ok{border-color:var(--ok)!important;background:var(--ok-bg)!important}
+.bad{border-color:var(--bad)!important;background:var(--bad-bg)!important}
+.seen{border-color:var(--seen)!important;background:var(--seen-bg)!important}
+.as-foot{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;padding:10px 14px;background:color-mix(in srgb, var(--given) 55%, transparent)}
+.as-foot label{font-size:13px;color:var(--muted);font-weight:600}
+.as-foot select{width:auto;min-width:160px}
+.as-foot .acts{display:flex;gap:8px;margin-left:auto}
+.fb{padding:0 14px 12px;font-size:14px}
+.fb:empty{display:none}
+.fb .okmsg{color:var(--ok);font-weight:700}
+.fb .badmsg{color:var(--bad);font-weight:700}
+.fb .seenmsg{color:var(--seen);font-weight:700}
+.fb .hint{color:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.sw{width:14px;height:14px;border-radius:4px;border:1px solid var(--rule-strong);display:inline-block}
+
+/* Answer grids */
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.qgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 18px}
+.q{display:flex;flex-direction:column;gap:4px;min-width:0}
+.q label{font-size:14px;font-weight:600}
+.q .row{display:flex;gap:8px;align-items:center}
+.q .unit{color:var(--muted);font-family:var(--f-num)}
+.mc{display:flex;flex-direction:column;gap:6px}
+.mc label{display:flex;gap:8px;align-items:flex-start;font-weight:400;padding:6px 8px;border:1px solid transparent;border-radius:6px}
+.mc input{margin-top:4px}
+.model{border-left:3px solid var(--accent);padding:6px 12px;background:var(--given);border-radius:0 6px 6px 0;font-size:14px}
+.vf{display:flex;flex-direction:column;gap:8px}
+.vf .stmt{font-weight:600;max-width:75ch}
+.vf .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.vf select{width:auto;min-width:140px}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:720px){.split{grid-template-columns:1fr}}
+.statement{font-size:13.5px}
+.statement td.sub{padding-left:20px}
+.statement tr.tot td{font-weight:700}
+footer{color:var(--muted);font-size:13px;border-top:1px solid var(--rule);padding-top:14px}
+@media (prefers-reduced-motion: no-preference){ .ok,.bad,.seen{transition:background-color .2s, border-color .2s} }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Principios de Contabilidad · Marketing · ISFT N°171</span>
+    <h1>Simulacro 2° parcial, versión autocorregible</h1>
+    <p class="lead">Completen los campos en blanco. Los campos sombreados ya vienen resueltos. Cada parte tiene su botón <b>Corregir</b>: lo correcto se marca en verde y lo incorrecto en rojo. Si se traban, <b>Ver solución</b> muestra la respuesta del asiento.</p>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--given)"></i>Dato dado</span>
+      <span><i class="sw" style="background:var(--ok-bg);border-color:var(--ok)"></i>Correcto</span>
+      <span><i class="sw" style="background:var(--bad-bg);border-color:var(--bad)"></i>Revisar</span>
+      <span><i class="sw" style="background:var(--seen-bg);border-color:var(--seen)"></i>Visto en la solución</span>
+    </div>
+  </header>
+
+  <div class="score" id="score" aria-live="polite">
+    <span class="chip" id="chip-vf">V o F <b>–</b></span>
+    <span class="chip" id="chip-diario">Diario <b>–</b></span>
+    <span class="chip" id="chip-resp">Saldos y resultado <b>–</b></span>
+    <span class="chip" id="chip-ratios">Indicadores <b>–</b></span>
+    <span class="spacer"></span>
+    <button class="primary" id="btn-all" type="button">Corregir todo</button>
+    <button class="ghost" id="btn-reset" type="button">Borrar respuestas</button>
+  </div>
+  <div id="confirm-reset" class="card" hidden>
+    <p>¿Borrar todas las respuestas? No se puede deshacer.</p>
+    <div style="display:flex;gap:8px"><button class="primary" id="btn-reset-yes" type="button">Sí, borrar</button><button id="btn-reset-no" type="button">Cancelar</button></div>
+  </div>
+
+  <!-- ===================== A ===================== -->
+  <section class="block" id="sec-a">
+    <div class="block-head"><h2>A. Verdadero o falso</h2><button type="button" data-check="vf">Corregir</button></div>
+    <p class="consigna muted">Indiquen si cada afirmación es verdadera o falsa y escriban la justificación. La página corrige V o F; la justificación la comparan ustedes con el modelo que aparece al corregir.</p>
+    <div class="card" id="vf-box"></div>
+  </section>
+
+  <!-- ===================== B ===================== -->
+  <section class="block" id="sec-b">
+    <div class="block-head"><h2>B. Ejercicio integrador: Estudio Pampa S.A.</h2><button type="button" data-check="diario">Corregir todo el diario</button></div>
+    <p class="consigna muted">Completen los asientos hasta el 31/12/2025: cuenta, importe, naturaleza (A+, A–, P+, RN+…) y variación patrimonial. Dentro de cada lado del asiento, el orden de las cuentas no importa.</p>
+    <details class="enun">
+      <summary>Enunciado completo</summary>
+      <div class="enun-body">
+        <p><b>01/11/2025</b> – Se constituye la sociedad anónima “Estudio Pampa S.A.”, agencia de publicidad y producción fotográfica. Los accionistas suscriben un capital de $ 15.000.000, que integran en su totalidad en la cuenta corriente que abrió la empresa en el Banco Nación. La empresa cierra su ejercicio económico el 31/12 de cada año.</p>
+        <p><b>02/11/2025</b> – Se constituye un fondo fijo de $ 120.000 mediante el cheque Nº 0001. El fondo fijo se destinará a gastos menores de hasta $ 25.000 cada uno y se repone a fin de cada mes.</p>
+        <p><b>04/11/2025</b> – Se compran 2 cámaras fotográficas y un equipo de iluminación para el estudio por $ 2.400.000. Se abona el 50% por transferencia bancaria y el resto se pagará a 30 días, sin intereses. El envío de los equipos hasta el estudio ($ 18.000) se paga en efectivo con el fondo fijo.</p>
+        <p><b>10/11/2025</b> – Se compra una camioneta para trasladar equipos a las producciones por $ 10.000.000, que se paga por transferencia bancaria. Los gastos de patentamiento e inscripción del vehículo ($ 400.000) también se abonan por transferencia.</p>
+        <p><b>18/11/2025</b> – Se realiza una campaña gráfica para el cliente Lumen S.R.L. por $ 1.800.000, que se cobrará a 30 días.</p>
+        <p><b>25/11/2025</b> – Se realiza una sesión de fotos de producto para el cliente Delta Viajes por $ 500.000. El cliente paga con un cheque, que se deposita ese mismo día en la cuenta del Banco Nación.</p>
+        <p><b>04/12/2025</b> – Se paga con el cheque Nº 0002 el saldo adeudado por la compra del 04/11.</p>
+        <p><b>31/12/2025</b> – Se efectúa el arqueo del fondo fijo, que arroja una existencia de dinero en efectivo de $ 17.500 y los siguientes comprobantes:</p>
+        <div class="tbl-scroll"><table class="mini">
+          <tr><th>Comprobante</th><th class="r">Importe</th></tr>
+          <tr><td>Factura del envío de los equipos (04/11)</td><td class="r num">$ 18.000</td></tr>
+          <tr><td>Factura de librería</td><td class="r num">$ 15.000</td></tr>
+          <tr><td>Recibos de taxis y remises</td><td class="r num">$ 21.000</td></tr>
+          <tr><td>Factura de artículos de limpieza y cafetería</td><td class="r num">$ 24.000</td></tr>
+          <tr><td>Factura por la reparación del aire acondicionado de la oficina</td><td class="r num">$ 22.000</td></tr>
+        </table></div>
+        <p>Se repone el fondo fijo con el cheque Nº 0003.</p>
+        <p><b>31/12/2025</b> – Al realizar la conciliación bancaria de diciembre, se detectan las siguientes diferencias permanentes, que la empresa todavía no registró:</p>
+        <p>a) Nota de débito por gastos de mantenimiento de cuenta de diciembre: $ 15.000.</p>
+        <p>b) Nota de débito por el rechazo, por falta de fondos, del cheque recibido de Delta Viajes el 25/11. Por el rechazo, el banco cobra además una comisión de $ 3.500.</p>
+        <p>c) Nota de crédito por una transferencia de Lumen S.R.L., que canceló el total de su deuda. La empresa no había sido informada del pago.</p>
+        <p>d) Del arqueo de fondos surge que el cheque Nº 0002 todavía se encuentra en la caja de la empresa: será entregado al proveedor en enero.</p>
+        <p>Las demás diferencias entre el extracto y el mayor son partidas temporarias.</p>
+        <p><b>Datos adicionales al 31/12/2025</b></p>
+        <p>• Equipos de fotografía: método lineal, año de alta completo. Vida útil: 5 años. Valor de recupero: $ 0.</p>
+        <p>• Rodados: método de intensidad de uso, según kilómetros recorridos. Vida útil estimada: 250.000 km. Valor de recupero: $ 2.900.000. Durante el período, el vehículo recorrió 5.000 km.</p>
+      </div>
+    </details>
+    <div id="diario" style="display:flex;flex-direction:column;gap:16px"></div>
+
+    <div class="block-head" style="margin-top:8px"><h3>Saldos, valor residual y resultado al 31/12/2025</h3><button type="button" data-check="resp">Corregir</button></div>
+    <div class="card"><div class="qgrid" id="resp-box"></div><div id="resp-fb" class="fb" style="padding:0"></div></div>
+  </section>
+
+  <!-- ===================== C ===================== -->
+  <section class="block" id="sec-c">
+    <div class="block-head"><h2>C. Análisis de estados contables: Hilos del Sur S.A.</h2><button type="button" data-check="ratios">Corregir</button></div>
+    <p class="consigna muted">Calculen e interpreten la rentabilidad del patrimonio neto (RPN) del ejercicio 2025 y la liquidez corriente al 31/12/2025. Redondeen a dos decimales.</p>
+    <div class="split">
+      <div class="card tbl-scroll">
+        <h3>Estado de situación patrimonial</h3>
+        <table class="mini statement">
+          <tr><th>Rubro</th><th class="r">31/12/2025</th><th class="r">31/12/2024</th></tr>
+          <tr><td>Caja y bancos</td><td class="r num">280.000</td><td class="r num">210.000</td></tr>
+          <tr><td>Créditos por ventas</td><td class="r num">360.000</td><td class="r num">290.000</td></tr>
+          <tr><td>Bienes de cambio</td><td class="r num">540.000</td><td class="r num">420.000</td></tr>
+          <tr class="tot"><td>Total del activo corriente</td><td class="r num">1.180.000</td><td class="r num">920.000</td></tr>
+          <tr><td>Bienes de uso</td><td class="r num">1.620.000</td><td class="r num">1.480.000</td></tr>
+          <tr class="tot"><td>Total del activo no corriente</td><td class="r num">1.620.000</td><td class="r num">1.480.000</td></tr>
+          <tr class="tot"><td>TOTAL DEL ACTIVO</td><td class="r num">2.800.000</td><td class="r num">2.400.000</td></tr>
+          <tr><td>Proveedores</td><td class="r num">390.000</td><td class="r num">350.000</td></tr>
+          <tr><td>Deudas fiscales</td><td class="r num">110.000</td><td class="r num">90.000</td></tr>
+          <tr><td>Deudas laborales y previsionales</td><td class="r num">90.000</td><td class="r num">80.000</td></tr>
+          <tr class="tot"><td>Total del pasivo corriente</td><td class="r num">590.000</td><td class="r num">520.000</td></tr>
+          <tr><td>Préstamos bancarios</td><td class="r num">610.000</td><td class="r num">480.000</td></tr>
+          <tr class="tot"><td>Total del pasivo no corriente</td><td class="r num">610.000</td><td class="r num">480.000</td></tr>
+          <tr class="tot"><td>TOTAL DEL PASIVO</td><td class="r num">1.200.000</td><td class="r num">1.000.000</td></tr>
+          <tr class="tot"><td>PATRIMONIO NETO</td><td class="r num">1.600.000</td><td class="r num">1.400.000</td></tr>
+          <tr class="tot"><td>TOTAL PASIVO + PN</td><td class="r num">2.800.000</td><td class="r num">2.400.000</td></tr>
+        </table>
+      </div>
+      <div class="card tbl-scroll">
+        <h3>Estado de resultados 2025</h3>
+        <table class="mini statement">
+          <tr><th>Concepto</th><th class="r">31/12/2025</th></tr>
+          <tr><td>Ventas</td><td class="r num">4.200.000</td></tr>
+          <tr><td>Costo de mercaderías vendidas</td><td class="r num">(2.520.000)</td></tr>
+          <tr class="tot"><td>Ganancia bruta</td><td class="r num">1.680.000</td></tr>
+          <tr><td>Gastos de administración</td><td class="r num">(520.000)</td></tr>
+          <tr><td>Gastos de comercialización</td><td class="r num">(610.000)</td></tr>
+          <tr><td>Intereses perdidos por préstamos</td><td class="r num">(150.000)</td></tr>
+          <tr class="tot"><td>Ganancia antes del impuesto</td><td class="r num">400.000</td></tr>
+          <tr><td>Impuesto a las ganancias</td><td class="r num">(140.000)</td></tr>
+          <tr class="tot"><td>Ganancia del ejercicio</td><td class="r num">260.000</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="card" id="ratios-box"></div>
+  </section>
+
+  <footer>Simulacro de práctica. Las respuestas se guardan solo en este navegador.</footer>
+</div>
+
+<script>
+(function(){
+const B = "Banco Nación c/c", ACR = "Acreedores por bienes de uso";
+const ACCTS = [ACR,"Amort. acum. equipos de fotografía","Amort. acum. rodados","Amortización equipos de fotografía","Amortización rodados",B,"Caja","Capital social","Cheques rechazados","Deudores por ventas","Documentos a pagar","Equipos de fotografía","Faltante de fondo fijo","Fondo fijo","Gastos bancarios","Gastos de flete","Gastos de librería","Gastos de limpieza y cafetería","Gastos de mantenimiento","Gastos de movilidad","Gastos de patentamiento","Ingresos por servicios","Intereses perdidos","Proveedores","Rodados","Sobrante de fondo fijo","Valores a depositar"];
+const ALT = {[ACR]:["Proveedores"]};
+const NATS = [["A+","A+"],["A–","A–"],["P+","P+"],["P–","P–"],["PN+","PN+"],["RN+","RN+"],["RP+","RP+"],["RegA+","Reg. Act. +"]];
+const VARS = ["Permutativa","Modificativa","Mixta"];
+// g: campos dados (a = cuenta, m = importe, n = naturaleza)
+const R=(s,a,m,n,g="")=>({s,a,m,n,g});
+const AS = [
+ {f:"01/11/2025",w:"Constitución de la sociedad (ejemplo resuelto)",v:"Modificativa",gv:true,rows:[R("D",B,15000000,"A+","amn"),R("H","Capital social",15000000,"PN+","amn")]},
+ {f:"02/11/2025",w:"Constitución del fondo fijo",v:"Permutativa",rows:[R("D","Fondo fijo",120000,"A+","am"),R("H",B,120000,"A–","am")],h:"Se entrega un cheque: sale dinero del banco y aparece un nuevo activo."},
+ {f:"04/11/2025",w:"Compra de los equipos de fotografía",v:"Permutativa",rows:[R("D","Equipos de fotografía",2400000,"A+","a"),R("H",B,1200000,"A–"),R("H",ACR,1200000,"P+")],h:"El 50% se paga por transferencia; el resto queda como deuda por la compra de un bien de uso. El envío pagado con el fondo fijo se registra recién en la rendición."},
+ {f:"10/11/2025",w:"Compra de la camioneta",v:"Permutativa",rows:[R("D","Rodados",10400000,"A+","a"),R("H",B,10400000,"A–","a")],h:"El patentamiento es necesario para poder usar el vehículo: forma parte de su costo (10.000.000 + 400.000)."},
+ {f:"18/11/2025",w:"Campaña para Lumen S.R.L.",v:"Modificativa",rows:[R("D","Deudores por ventas",1800000,"A+","m"),R("H","Ingresos por servicios",1800000,"RP+","m")],h:"Es un servicio a cobrar a 30 días sin documentar."},
+ {f:"25/11/2025",w:"Sesión de fotos para Delta Viajes",v:"Modificativa",rows:[R("D",B,500000,"A+","m"),R("H","Ingresos por servicios",500000,"RP+","m")],h:"El cheque se deposita en el día: va directo al banco."},
+ {f:"04/12/2025",w:"Pago del saldo de los equipos",v:"Permutativa",rows:[R("D",ACR,1200000,"P–"),R("H",B,1200000,"A–","a")],h:"Se cancela la deuda generada el 04/11."},
+ {f:"31/12/2025",w:"Rendición y arqueo del fondo fijo",v:"Mixta",rows:[R("D","Equipos de fotografía",18000,"A+","m"),R("D","Gastos de librería",15000,"RN+","am"),R("D","Gastos de movilidad",21000,"RN+","am"),R("D","Gastos de limpieza y cafetería",24000,"RN+","am"),R("D","Gastos de mantenimiento",22000,"RN+","m"),R("D","Faltante de fondo fijo",2500,"RN+"),R("H","Fondo fijo",102500,"A–","a")],h:"El envío de los equipos es parte del costo del bien de uso, aunque se pague con el fondo fijo. La reparación del aire acondicionado es un gasto. Faltante = lo que debería haber (120.000 − 100.000) − lo contado (17.500). Es mixta porque hay un aumento de activo y gastos."},
+ {f:"31/12/2025",w:"Reposición del fondo fijo",v:"Permutativa",rows:[R("D","Fondo fijo",102500,"A+","a"),R("H",B,102500,"A–","a")],h:"Se repone lo que falta para volver al importe del fondo: 120.000 − 17.500."},
+ {f:"31/12/2025",w:"Diferencia a): mantenimiento de cuenta",v:"Modificativa",rows:[R("D","Gastos bancarios",15000,"RN+","m"),R("H",B,15000,"A–","m")],h:"El banco debitó un gasto que la empresa no había registrado."},
+ {f:"31/12/2025",w:"Diferencia b): cheque rechazado y comisión",v:"Mixta",rows:[R("D","Cheques rechazados",500000,"A+","m"),R("D","Gastos bancarios",3500,"RN+","m"),R("H",B,503500,"A–")],h:"El cliente sigue debiendo: no se anula el ingreso, se registra el cheque rechazado como un crédito. La comisión es un gasto."},
+ {f:"31/12/2025",w:"Diferencia c): transferencia de Lumen S.R.L.",v:"Permutativa",rows:[R("D",B,1800000,"A+","m"),R("H","Deudores por ventas",1800000,"A–","m")],h:"El cliente canceló su deuda: entra dinero al banco y se cancela el crédito."},
+ {f:"31/12/2025",w:"Diferencia d): cheque Nº 0002 no entregado",v:"Permutativa",rows:[R("D",B,1200000,"A+"),R("H",ACR,1200000,"P+")],h:"Si el cheque sigue en la empresa, la deuda no se canceló: se revierte el asiento del 04/12."},
+ {f:"31/12/2025",w:"Amortizaciones del ejercicio",v:"Modificativa",rows:[R("D","Amortización equipos de fotografía",483600,"RN+","a"),R("D","Amortización rodados",150000,"RN+","a"),R("H","Amort. acum. equipos de fotografía",483600,"RegA+","a"),R("H","Amort. acum. rodados",150000,"RegA+","a")],h:"Equipos: (2.400.000 + 18.000) / 5 años = 483.600. Rodado: (10.400.000 − 2.900.000) / 250.000 km × 5.000 km = 150.000."},
+];
+const RESP = [
+ {id:"r-ff",l:"Saldo de Fondo fijo",v:120000},
+ {id:"r-bco",l:"Saldo de Banco Nación c/c",v:4959000},
+ {id:"r-vr1",l:"Valor residual de Equipos de fotografía",v:1934400},
+ {id:"r-vr2",l:"Valor residual de Rodados",v:10250000},
+ {id:"r-res",l:"Resultado del ejercicio",v:1563400},
+];
+const RESP_HINT = "Para los saldos, mayoricen Fondo fijo y Banco incluyendo los ajustes del 31/12. Valor residual = valor de origen − amortización acumulada. Resultado = resultados positivos − resultados negativos (incluidas las amortizaciones).";
+const VF = [
+ {id:"vf1",t:"El flete pagado para trasladar un bien de uso hasta la empresa se registra como un gasto del período, ya que se abonó con dinero del fondo fijo.",v:"F",m:"Falso. El flete es una erogación necesaria para poner el bien en condiciones de uso, por lo que forma parte de su costo de incorporación (se debita la cuenta del bien de uso). La forma de pago (fondo fijo, cheque o transferencia) no cambia su naturaleza."},
+ {id:"vf2",t:"Si una empresa obtiene un apalancamiento financiero mayor a 1, significa que la utilización del pasivo (endeudamiento con terceros) fue positiva durante el período.",v:"V",m:"Verdadero. AF > 1 indica que la rentabilidad obtenida con los fondos de terceros superó su costo (los intereses), por lo que endeudarse benefició a los accionistas. AF = 1 es neutro y AF < 1, negativo."},
+];
+const RAT = [
+ {id:"rpn",l:"RPN – Rentabilidad del patrimonio neto",unit:"%",v:17.33,tol:0.06,pct:true,
+  ok:"260.000 / ((1.600.000 + 1.400.000) / 2) × 100 = 260.000 / 1.500.000 × 100 = 17,33 %",
+  hint:"Usen el patrimonio neto promedio entre el inicio y el cierre del ejercicio.",
+  mc:["Por cada $ 100 que los accionistas tuvieron invertidos en promedio, el ejercicio les generó $ 17,33 de ganancia.","Las ventas de 2025 crecieron un 17,33 % respecto de 2024.","El 17,33 % del activo está financiado con deudas."],mcOk:0},
+ {id:"lc",l:"Liquidez corriente",unit:"",v:2.00,tol:0.011,
+  ok:"1.180.000 / 590.000 = 2,00",hint:"Comparen activo corriente con pasivo corriente al cierre.",
+  mc:["La empresa tiene el doble de deudas que de patrimonio neto.","Por cada $ 1 de deuda de corto plazo, la empresa tiene $ 2 de activos corrientes: puede afrontar sus compromisos de corto plazo.","La empresa no puede pagar sus deudas de corto plazo."],mcOk:1},
+];
+
+const $ = s=>document.querySelector(s);
+const fmt = n=>n.toLocaleString("es-AR",{maximumFractionDigits:2});
+const esc = s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function parseNum(s){ if(s==null) return NaN; s=String(s).replace(/[\s$%]/g,""); if(!s) return NaN;
+  if(s.includes(",")) s=s.replace(/\./g,"").replace(",","."); else if(/^\d{1,3}(\.\d{3})+$/.test(s)) s=s.replace(/\./g,"");
+  return Number(s); }
+const KEY="simulacro2-pampa-v1"; let store={};
+try{ store=JSON.parse(localStorage.getItem(KEY)||"{}")||{}; }catch(e){ store={}; }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} }
+const seen = new Set(store.__seen||[]);
+
+function opts(list, sel){ return '<option value="">—</option>'+list.map(x=>{const [v,l]=Array.isArray(x)?x:[x,x];return `<option value="${esc(v)}"${v===sel?" selected":""}>${esc(l)}</option>`}).join(""); }
+const natLabel = v=>(NATS.find(x=>x[0]===v)||[v,v])[1];
+
+// ---------- render diario
+const D = $("#diario");
+AS.forEach((as,i)=>{
+  const n=i+1; let rows="";
+  as.rows.forEach((r,j)=>{
+    const id=`${n}-${j}`;
+    const acct = r.g.includes("a") ? `<span class="given">${esc(r.a)}</span>` : `<select id="a-${id}" aria-label="Cuenta">${opts(ACCTS, store["a-"+id])}</select>`;
+    const amt = r.g.includes("m") ? `<span class="given num">${fmt(r.m)}</span>` : `<input type="text" inputmode="decimal" class="amt" id="m-${id}" aria-label="Importe" value="${esc(store["m-"+id]||"")}" placeholder="0">`;
+    const nat = r.g.includes("n") ? `<span class="given">${natLabel(r.n)}</span>` : `<select id="n-${id}" aria-label="Naturaleza">${opts(NATS, store["n-"+id])}</select>`;
+    rows += `<tr class="${r.s==="D"?"dr":"cr"}"><td class="acct">${acct}</td><td class="amt">${r.s==="D"?amt:""}</td><td class="amt">${r.s==="H"?amt:""}</td><td class="nat">${nat}</td></tr>`;
+  });
+  const vsel = as.gv ? `<span class="given" style="width:auto">${as.v}</span>` : `<select id="v-${n}">${opts(VARS, store["v-"+n])}</select>`;
+  const el=document.createElement("article"); el.className="asiento"; el.id="as-"+n;
+  el.innerHTML = `<div class="as-head"><span class="n">Asiento ${n}</span><span class="date">${as.f}</span><span class="what">${esc(as.w)}</span></div>
+   <div class="tbl-scroll"><table class="ledger"><thead><tr><th>Cuenta</th><th class="r">Debe</th><th class="r">Haber</th><th>Naturaleza</th></tr></thead><tbody>${rows}</tbody></table></div>
+   <div class="as-foot"><label for="v-${n}">Variación patrimonial</label>${vsel}
+     <div class="acts">${as.gv?"":`<button type="button" class="ghost" data-sol="${n}">Ver solución</button><button type="button" data-as="${n}">Corregir</button>`}</div></div>
+   <div class="fb" id="fb-${n}"></div>`;
+  D.appendChild(el);
+});
+
+// ---------- render respuestas
+$("#resp-box").innerHTML = RESP.map(q=>`<div class="q"><label for="${q.id}">${q.l}</label><div class="row"><span class="unit">$</span><input type="text" inputmode="decimal" class="amt" id="${q.id}" value="${esc(store[q.id]||"")}"></div></div>`).join("")
+ + `<div class="q"><label for="r-tipo">El resultado es</label><select id="r-tipo">${opts(["Ganancia","Pérdida"], store["r-tipo"])}</select></div>`;
+
+// ---------- render V/F
+$("#vf-box").innerHTML = VF.map((q,i)=>`<div class="vf"><p class="stmt">${i+1}. ${esc(q.t)}</p>
+  <div class="row"><select id="${q.id}" aria-label="Verdadero o falso">${opts([["V","Verdadero"],["F","Falso"]], store[q.id])}</select></div>
+  <label class="muted" for="${q.id}-j" style="font-size:13px">Justificación</label>
+  <textarea id="${q.id}-j" rows="3">${esc(store[q.id+"-j"]||"")}</textarea>
+  <div class="model" id="${q.id}-m" hidden></div></div>`).join('<hr style="border:0;border-top:1px solid var(--rule);width:100%">');
+
+// ---------- render ratios
+$("#ratios-box").innerHTML = RAT.map(q=>`<div class="vf"><div class="q"><label for="${q.id}">${q.l}</label>
+  <div class="row" style="max-width:260px"><input type="text" inputmode="decimal" class="amt" id="${q.id}" value="${esc(store[q.id]||"")}"><span class="unit">${q.unit}</span></div></div>
+  <p class="muted" style="font-size:13px">¿Qué significa el resultado?</p>
+  <div class="mc" id="${q.id}-mc">${q.mc.map((t,k)=>`<label><input type="radio" name="${q.id}-mc" value="${k}"${String(store[q.id+"-mc"])===String(k)?" checked":""}><span>${esc(t)}</span></label>`).join("")}</div>
+  <div class="fb" id="${q.id}-fb" style="padding:0"></div></div>`).join('<hr style="border:0;border-top:1px solid var(--rule);width:100%">');
+
+// ---------- persistence
+document.addEventListener("input", e=>{ const t=e.target; if(!t.id && t.type!=="radio") return;
+  if(t.type==="radio") store[t.name]=t.value; else store[t.id]=t.value;
+  t.classList.remove("ok","bad"); save(); });
+document.addEventListener("change", e=>{ const t=e.target; if(t.type==="radio"){ store[t.name]=t.value; save(); } });
+
+function mark(el, ok){ if(!el) return; el.classList.remove("ok","bad"); el.classList.add(ok?"ok":"bad"); }
+const acctMatch=(chosen, sol)=> chosen===sol || (ALT[sol]||[]).includes(chosen);
+
+// ---------- corrector de asientos
+const results = {};  // n -> {ok, total}
+function checkAsiento(n, quiet){
+  const as=AS[n-1]; let ok=0, total=0, problems=[];
+  ["D","H"].forEach(side=>{
+    const idx = as.rows.map((r,j)=>[r,j]).filter(([r])=>r.s===side);
+    const used = new Set();
+    // primero filas con cuenta dada, después las elegidas
+    // orden: filas con cuenta dada, luego filas con importe dado (quedan ancladas a su propia línea), luego libres
+    const rank = r => r.g.includes("a") ? 0 : r.g.includes("m") ? 1 : 2;
+    const order = idx.slice().sort((a,b)=>rank(a[0])-rank(b[0]));
+    order.forEach(([r,j])=>{
+      const id=`${n}-${j}`;
+      const aEl=$("#a-"+id), mEl=$("#m-"+id), nEl=$("#n-"+id);
+      const chosen = r.g.includes("a") ? r.a : (aEl?aEl.value:"");
+      let sol = null;
+      if(r.g.includes("a")){ sol=r; used.add(j); }
+      else if(r.g.includes("m")){ if(acctMatch(chosen, r.a)){ sol=r; used.add(j); } }
+      else {
+        const hit = idx.find(([s,k])=>!used.has(k) && !s.g.includes("a") && !s.g.includes("m") && acctMatch(chosen, s.a));
+        if(hit){ sol=hit[0]; used.add(hit[1]); }
+      }
+      if(aEl){ total++; const g=!!sol; mark(aEl,g); if(g) ok++; else problems.push("cuenta"); }
+      if(mEl){ total++; const target = sol ? sol.m : r.m; const g = Math.abs(parseNum(mEl.value)-target)<0.5; mark(mEl,g); if(g) ok++; else problems.push("importe"); }
+      if(nEl){ total++; const target = sol ? sol.n : null; const g = !!target && nEl.value===target; mark(nEl,g); if(g) ok++; else problems.push("naturaleza"); }
+    });
+  });
+  const vEl=$("#v-"+n);
+  if(vEl){ total++; const g=vEl.value===as.v; mark(vEl,g); if(g) ok++; else problems.push("variación"); }
+  results[n]={ok,total};
+  const fb=$("#fb-"+n);
+  if(seen.has(n)) fb.innerHTML=`<span class="seenmsg">Solución vista.</span> <span class="hint">${esc(as.h||"")}</span>`;
+  else if(ok===total) fb.innerHTML=`<span class="okmsg">Correcto.</span>`;
+  else { const kinds=[...new Set(problems)].join(", ");
+    fb.innerHTML=`<span class="badmsg">${total-ok} de ${total} campos para revisar (${kinds}).</span> <span class="hint">${esc(as.h||"")}</span>`; }
+  if(!quiet) updateScore();
+}
+function showSol(n){
+  const as=AS[n-1];
+  as.rows.forEach((r,j)=>{ const id=`${n}-${j}`;
+    const aEl=$("#a-"+id), mEl=$("#m-"+id), nEl=$("#n-"+id);
+    if(aEl){ aEl.value=r.a; store[aEl.id]=r.a; }
+    if(mEl){ mEl.value=fmt(r.m); store[mEl.id]=mEl.value; }
+    if(nEl){ nEl.value=r.n; store[nEl.id]=r.n; } });
+  const vEl=$("#v-"+n); if(vEl){ vEl.value=as.v; store[vEl.id]=as.v; }
+  seen.add(n); store.__seen=[...seen]; save();
+  checkAsiento(n);
+  $("#as-"+n).querySelectorAll("select,input").forEach(el=>{el.classList.remove("ok","bad");el.classList.add("seen")});
+}
+
+function checkResp(quiet){
+  let ok=0; RESP.forEach(q=>{ const el=$("#"+q.id); const g=Math.abs(parseNum(el.value)-q.v)<0.5; mark(el,g); if(g) ok++; });
+  const t=$("#r-tipo"); const g=t.value==="Ganancia"; mark(t,g); if(g) ok++;
+  results.resp={ok,total:RESP.length+1};
+  $("#resp-fb").innerHTML = ok===RESP.length+1 ? `<span class="okmsg">Todo correcto.</span>` : `<span class="badmsg">${RESP.length+1-ok} para revisar.</span> <span class="hint">${esc(RESP_HINT)}</span>`;
+  if(!quiet) updateScore();
+}
+function checkVF(quiet){
+  let ok=0; VF.forEach(q=>{ const el=$("#"+q.id); const g=el.value===q.v; mark(el,g); if(g) ok++;
+    const m=$("#"+q.id+"-m"); m.hidden=false; m.innerHTML=`<b>Respuesta modelo.</b> ${esc(q.m)} <span class="muted">Comparen con su justificación: sin justificación, la respuesta vale cero.</span>`; });
+  results.vf={ok,total:VF.length}; if(!quiet) updateScore();
+}
+function checkRatios(quiet){
+  let ok=0, total=0;
+  RAT.forEach(q=>{ const el=$("#"+q.id); let v=parseNum(el.value); if(q.pct && v>0 && v<1) v=v*100;
+    const g=Math.abs(v-q.v)<=q.tol; mark(el,g); total++; if(g) ok++;
+    const sel=document.querySelector(`input[name="${q.id}-mc"]:checked`); total++;
+    const box=$("#"+q.id+"-mc"); box.querySelectorAll("label").forEach(l=>l.classList.remove("ok","bad"));
+    const mg = sel && Number(sel.value)===q.mcOk; if(sel) mark(sel.closest("label"), mg); if(mg) ok++;
+    $("#"+q.id+"-fb").innerHTML = (g&&mg) ? `<span class="okmsg">Correcto.</span> <span class="hint num">${esc(q.ok)}</span>` :
+      `<span class="badmsg">Revisen ${!g&&!mg?"el cálculo y la interpretación":!g?"el cálculo":"la interpretación"}.</span> <span class="hint">${esc(q.hint)}</span>`;
+  });
+  results.ratios={ok,total}; if(!quiet) updateScore();
+}
+function setChip(id, r){ const c=$(id); if(!r){ c.querySelector("b").textContent="–"; c.classList.remove("done"); return; }
+  c.querySelector("b").textContent=`${r.ok}/${r.total}`; c.classList.toggle("done", r.ok===r.total); }
+function updateScore(){
+  let ok=0,total=0,any=false; for(let n=2;n<=AS.length;n++){ if(results[n]){ any=true; ok+=results[n].ok; total+=results[n].total; } }
+  setChip("#chip-diario", any?{ok,total}:null); setChip("#chip-resp", results.resp); setChip("#chip-ratios", results.ratios); setChip("#chip-vf", results.vf);
+}
+function checkAll(){ for(let n=2;n<=AS.length;n++) checkAsiento(n,true); checkResp(true); checkVF(true); checkRatios(true); updateScore();
+  seen.forEach(n=>$("#as-"+n).querySelectorAll("select,input").forEach(el=>{el.classList.remove("ok","bad");el.classList.add("seen")})); }
+
+document.addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return;
+  if(b.dataset.as) checkAsiento(+b.dataset.as);
+  else if(b.dataset.sol) showSol(+b.dataset.sol);
+  else if(b.dataset.check==="diario"){ for(let n=2;n<=AS.length;n++) checkAsiento(n,true); updateScore(); }
+  else if(b.dataset.check==="resp") checkResp();
+  else if(b.dataset.check==="vf") checkVF();
+  else if(b.dataset.check==="ratios") checkRatios();
+  else if(b.id==="btn-all") checkAll();
+  else if(b.id==="btn-reset") $("#confirm-reset").hidden=false;
+  else if(b.id==="btn-reset-no") $("#confirm-reset").hidden=true;
+  else if(b.id==="btn-reset-yes"){ store={}; save(); try{localStorage.removeItem(KEY);}catch(_){} location.reload(); }
+});
+})();
+</script>
